@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>灵动岛 Web 复刻 - Dynamic Island</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0a0a0a;
+    color: #f0f0f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 40px;
+  }
+
+  /* 设备外框（模拟 iPhone） */
+  .device {
+    width: 320px;
+    height: 640px;
+    background: #000;
+    border-radius: 48px;
+    padding: 12px;
+    position: relative;
+    box-shadow: 0 0 0 3px #1a1a1a, 0 0 0 6px #2a2a2a, 0 30px 60px rgba(0,0,0,0.6);
+  }
+  .device-screen {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    border-radius: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 灵动岛容器 */
+  .island {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  /* 状态 1：空闲（默认小圆） */
+  .island.idle {
+    width: 120px;
+    height: 36px;
+  }
+  .island.idle .content { display: none; }
+
+  /* 状态 2：来电（宽 + 头像 + 姓名 + 按钮） */
+  .island.call {
+    width: 280px;
+    height: 64px;
+    padding: 8px 12px;
+  }
+  .island.call .content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .call-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #34c759, #30d158);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .call-info { flex: 1; min-width: 0; }
+  .call-name { font-size: 14px; font-weight: 600; color: #fff; }
+  .call-desc { font-size: 11px; color: #999; }
+  .call-actions { display: flex; gap: 8px; }
+  .call-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .call-btn.accept { background: #34c759; color: #fff; }
+  .call-btn.decline { background: #ff3b30; color: #fff; }
+
+  /* 状态 3：音乐（展开大 + 封面 + 进度条） */
+  .island.music {
+    width: 300px;
+    height: 110px;
+    padding: 12px;
+  }
+  .island.music .content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .music-cover {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9500, #ff3b30);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(255,59,48,0.3);
+  }
+  .music-info { flex: 1; min-width: 0; }
+  .music-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .music-artist { font-size: 12px; color: #999; margin-top: 2px; }
+  .music-progress {
+    width: 100%;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .music-progress-bar {
+    width: 37%;
+    height: 100%;
+    background: #fff;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+  .music-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .music-ctrl-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  /* 状态 4：计时器（小胶囊 + 计时数字） */
+  .island.timer {
+    width: 160px;
+    height: 42px;
+    padding: 0 14px;
+  }
+  .island.timer .content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .timer-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff9500, #ffcc00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .timer-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 状态 5：消息（宽 + 头像 + 消息内容） */
+  .island.message {
+    width: 260px;
+    height: 56px;
+    padding: 8px 12px;
+  }
+  .island.message .content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007aff, #5ac8fa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .msg-info { flex: 1; min-width: 0; }
+  .msg-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .msg-content {
+    font-size: 12px;
+    color: #bbb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 按钮区 */
+  .controls {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 280px;
+  }
+  .control-btn {
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .control-btn:hover {
+    background: #2a2a2a;
+    border-color: #555;
+    transform: translateY(-1px);
+  }
+  .control-btn:active { transform: translateY(0); }
+
+  /* 动画 */
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .island.call .call-avatar { animation: pulse 1.5s ease-in-out infinite; }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .island.music .music-cover {
+    animation: spin 8s linear infinite;
+  }
+
+  @keyframes popIn {
+    0% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  }
+  .island:not(.idle) { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+</style>
+</head>
+<body>
+
+<h1>🍎 灵动岛 Web 复刻</h1>
+<p class="subtitle">Dynamic Island · 纯 HTML/CSS/JS 实现</p>
+
+<div class="device">
+  <div class="device-screen">
+    <div id="island" class="island idle">
+      <!-- 空闲状态只有黑色胶囊，内容隐藏 -->
+      <div class="content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="control-btn" onclick="showCall()">📞 来电（张三）</button>
+  <button class="control-btn" onclick="showMusic()">🎵 音乐播放</button>
+  <button class="control-btn" onclick="showTimer()">⏱️ 计时器</button>
+  <button class="control-btn" onclick="showMessage()">💬 微信消息</button>
+  <button class="control-btn" onclick="showIdle()">⚫ 空闲（原始状态）</button>
+</div>
+
+<script>
+  const island = document.getElementById('island');
+  let timerInterval = null;
+
+  function clearAll() {
+    // 清除旧的 class（保留 island）
+    island.className = 'island';
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function showIdle() {
+    clearAll();
+    island.classList.add('idle');
+    island.innerHTML = '<div class="content"></div>';
+  }
+
+  function showCall() {
+    clearAll();
+    island.classList.add('call');
+    island.innerHTML = `
+      <div class="content">
+        <div class="call-avatar">👤</div>
+        <div class="call-info">
+          <div class="call-name">张三</div>
+          <div class="call-desc">正在来电 · iPhone</div>
+        </div>
+        <div class="call-actions">
+          <button class="call-btn decline" onclick="declineCall()">📞</button>
+          <button class="call-btn accept" onclick="acceptCall()">📞</button>
+        </div>
+      </div>
+    `;
+  }
+  function declineCall() { showIdle(); }
+  function acceptCall() { showMusic(); }
+
+  function showMusic() {
+    clearAll();
+    island.classList.add('music');
+    island.innerHTML = `
+      <div class="content">
+        <div class="music-cover">🎵</div>
+        <div class="music-info">
+          <div class="music-title">夜空中最亮的星</div>
+          <div class="music-artist">逃跑计划</div>
+          <div class="music-progress">
+            <div class="music-progress-bar" id="progressBar"></div>
+          </div>
+          <div class="music-controls">
+            <button class="music-ctrl-btn" onclick="prevSong()">⏮</button>
+            <button class="music-ctrl-btn" onclick="togglePlay()">⏸</button>
+            <button class="music-ctrl-btn" onclick="nextSong()">⏭</button>
+          </div>
+        </div>
+      </div>
+    `;
+    let progress = 37;
+    timerInterval = setInterval(() => {
+      progress = (progress + 0.3) % 100;
+      const bar = document.getElementById('progressBar');
+      if (bar) bar.style.width = progress + '%';
+    }, 200);
+  }
+  function prevSong() { showMusic(); }
+  function togglePlay() { showIdle(); }
+  function nextSong() { showMusic(); }
+
+  function showTimer() {
+    clearAll();
+    island.classList.add('timer');
+    let seconds = 0;
+    island.innerHTML = `
+      <div class="content">
+        <div class="timer-icon">⏱</div>
+        <div class="timer-text" id="timerText">00:00</div>
+      </div>
+    `;
+    timerInterval = setInterval(() => {
+      seconds++;
+      const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+      const s = String(seconds % 60).padStart(2, '0');
+      const el = document.getElementById('timerText');
+      if (el) el.textContent = `${m}:${s}`;
+    }, 1000);
+  }
+
+  function showMessage() {
+    clearAll();
+    island.classList.add('message');
+    island.innerHTML = `
+      <div class="content">
+        <div class="msg-avatar">WX</div>
+        <div class="msg-info">
+          <div class="msg-name">妈妈</div>
+          <div class="msg-content">今晚回家吃饭吗？爸爸买了你爱吃的红烧肉 🥩</div>
+        </div>
+      </div>
+    `;
+    // 自动 5 秒后收起
+    setTimeout(showIdle, 5000);
+  }
+
+  // 默认空闲
+  showIdle();
+</script>
+</body>
+</html>
